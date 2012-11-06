@@ -50,6 +50,7 @@
 
 #import "DTAttributedTextCell.h"
 #import "DTAttributedTextContentView.h"
+#import "DTAttributedMultiTextContentView.h"
 #import "DTAttributedTextView.h"
 #import "DTCoreTextFontCollection.h"
 #import "DTCoreTextGlyphRun.h"
