@@ -579,6 +579,8 @@
 		{
 			self.paragraphStyle.paragraphSpacing = [webkitMarginAfter pixelSizeOfCSSMeasureRelativeToCurrentTextSize:fontDescriptor.pointSize];
 		}
+		self.paragraphStyle.paragraphSpacingBefore = 0;
+		self.paragraphStyle.paragraphSpacing = 0;
 	}
 	NSString *fontVariantStr = [[styles objectForKey:@"font-variant"] lowercaseString];
 	if (fontVariantStr)
