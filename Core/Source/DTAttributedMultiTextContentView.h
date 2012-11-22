@@ -119,6 +119,7 @@
 @property (nonatomic) CGSize backgroundOffset;
 @property (nonatomic) NSInteger columnCount;
 @property (nonatomic) NSInteger columnGap;
+@property (nonatomic) NSInteger averageLineHeight;
 
 @property (nonatomic, assign) IBOutlet id <DTAttributedMultiTextContentViewDelegate> delegate;	// subtle simulator bug - use assign not __unsafe_unretained
 

@@ -317,6 +317,11 @@ static Class _layerClassToUseForDTAttributedMultiTextContentView = nil;
 						if (lframe) {
 							[_layoutFrames addObject:lframe];
 							offset = [lframe visibleStringRange].length + [lframe visibleStringRange].location;
+                            float globalLineHeight = 0;
+                            for (DTCoreTextLayoutLine *line in lframe.lines)
+                                globalLineHeight += line.frame.size.height;
+                            globalLineHeight /= [lframe.lines count];
+                            _averageLineHeight = (_averageLineHeight) ? (globalLineHeight + _averageLineHeight) / 2 : globalLineHeight;
 						}
 					}
 				}
@@ -360,5 +365,6 @@ static Class _layerClassToUseForDTAttributedMultiTextContentView = nil;
 @synthesize drawDebugFrames = _drawDebugFrames;
 @synthesize layoutOffset = _layoutOffset;
 @synthesize backgroundOffset = _backgroundOffset;
+@synthesize averageLineHeight = _averageLineHeight;
 
 @end
