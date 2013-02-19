@@ -22,5 +22,10 @@ Pod::Spec.new do |spec|
         system '/usr/bin/xxd', '-i', css_file, css_file + '.c'
       end
     end
+    override_file = Dir.glob(config.project_root + "**/DTCoreTextFontOverrides.plist").first
+    if override_file
+      require 'fileutils'
+      FileUtils.copy(override_file, config.project_pods_root + 'DTCoreText/Demo/Resources/DTCoreTextFontOverrides.plist')
+    end
   end
 end
