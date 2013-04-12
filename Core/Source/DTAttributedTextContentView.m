@@ -168,6 +168,7 @@ static Class _layerClassToUseForDTAttributedTextContentView = nil;
 	
 	DTCoreTextLayoutFrame *theLayoutFrame = self.layoutFrame;
 	
+	
 	NSAttributedString *layoutString = [theLayoutFrame attributedStringFragment];
 	NSArray *lines;
 	if (CGRectIsInfinite(rect))
@@ -407,7 +408,7 @@ static Class _layerClassToUseForDTAttributedTextContentView = nil;
 		CGContextConcatCTM(ctx, transform);
 	}
 	
-	DTCoreTextLayoutFrame *theLayoutFrame = self.layoutFrame; // this is synchronized
+	NSMutableArray *lFrames = self.layoutFrames;
 	
 	// construct drawing options
 	DTCoreTextLayoutFrameDrawingOptions options = DTCoreTextLayoutFrameDrawingDefault;
@@ -422,19 +423,23 @@ static Class _layerClassToUseForDTAttributedTextContentView = nil;
 		options |= DTCoreTextLayoutFrameDrawingOmitLinks;
 	}
 	
-	// need to prevent updating of string and drawing at the same time
-	[theLayoutFrame drawInContext:ctx options:options];
-	
-	if (_delegateFlags.delegateSupportsNotificationAfterDrawing)
-	{
-		[_delegate attributedTextContentView:self didDrawLayoutFrame:theLayoutFrame inContext:ctx];
+	for (DTCoreTextLayoutFrame *lframe in lFrames) {
+		// need to prevent updating of string and drawing at the same time
+		[lframe drawInContext:ctx options:options];
+		
+		if (_delegateFlags.delegateSupportsNotificationAfterDrawing)
+		{
+			[_delegate attributedTextContentView:self didDrawLayoutFrame:lframe inContext:ctx];
+		}
 	}
 }
 
 - (void)drawRect:(CGRect)rect
 {
 	CGContextRef context = UIGraphicsGetCurrentContext();
-	[self.layoutFrame drawInContext:context options:DTCoreTextLayoutFrameDrawingDefault];
+	for (DTCoreTextLayoutFrame *lframe in self.layoutFrames) {
+		[lframe drawInContext:context options:DTCoreTextLayoutFrameDrawingDefault];
+	}
 }
 
 - (void)relayoutText
@@ -850,6 +855,60 @@ static Class _layerClassToUseForDTAttributedTextContentView = nil;
 	return customViewsForAttachmentsIndex;
 }
 
+- (NSMutableArray *)layoutFrames
+{
+    @synchronized(self)
+	{
+		if (!_layoutFrames && self.layouter)
+		{
+            CGRect rect = UIEdgeInsetsInsetRect(self.bounds, _edgeInsets);
+            
+            _layoutFrames = [[NSMutableArray alloc] initWithCapacity:self.columnCount];
+            
+            NSInteger offset = 0;
+            NSInteger columnWidth = (rect.size.width - (self.columnGap * (self.columnCount - 1))) / self.columnCount;
+            
+            for (NSInteger i = 0; i < self.columnCount; i++) {
+                
+                DTCoreTextLayoutFrame* lframe = [[DTCoreTextLayoutFrame alloc] initWithFrame:CGRectMake(((columnWidth + self.columnGap) * i), 0, columnWidth, rect.size.height) layouter:self.layouter range:NSMakeRange(offset, 0)];
+                
+                if (lframe) {
+                    [_layoutFrames addObject:lframe];
+                    offset = [lframe visibleStringRange].length + [lframe visibleStringRange].location;
+                }
+            }
+			
+        }
+		
+		return _layoutFrames;
+	}
+}
+
+- (DTCoreTextLayoutFrame *)layoutFrameForPosition:(NSInteger)index
+{
+    DTCoreTextLayoutFrame *layoutFrame;
+    for (layoutFrame in self.layoutFrames) {
+        if (index < [layoutFrame visibleStringRange].length + [layoutFrame visibleStringRange].location) {
+            break;
+        }
+    }
+    return layoutFrame;
+}
+
+- (NSInteger)columnGap
+{
+	if (!_columnGap)
+		return 15;
+	return _columnGap;
+}
+
+- (NSInteger)columnCount
+{
+	if (!_columnCount)
+		return 1;
+	return _columnCount;
+}
+
 - (void)setDelegate:(id<DTAttributedTextContentViewDelegate>)delegate
 {
 	_delegate = delegate;
@@ -879,6 +938,7 @@ static Class _layerClassToUseForDTAttributedTextContentView = nil;
 
 @synthesize layouter = _layouter;
 @synthesize layoutFrame = _layoutFrame;
+@synthesize layoutFrames = _layoutFrames;
 @synthesize attributedString = _attributedString;
 @synthesize delegate = _delegate;
 @synthesize edgeInsets = _edgeInsets;
@@ -893,6 +953,9 @@ static Class _layerClassToUseForDTAttributedTextContentView = nil;
 @synthesize customViewsForLinksIndex;
 @synthesize customViewsForAttachmentsIndex;
 @synthesize relayoutMask = _relayoutMask;
+
+@synthesize columnCount = _columnCount;
+@synthesize columnGap = _columnGap;
 
 @end
 

@@ -188,6 +188,21 @@ typedef NSUInteger DTAttributedTextContentViewRelayoutMask;
  */
 @property (atomic, strong) DTCoreTextLayoutFrame *layoutFrame;
 
+/**
+ Beingenious magic
+ */
+@property (nonatomic, strong) NSMutableArray *layoutFrames;
+
+/**
+ Return the correct layout frame for attributedString position
+ */
+- (DTCoreTextLayoutFrame *)layoutFrameForPosition:(NSInteger)index;
+
+/**
+ Handling multi-column
+ */
+@property (nonatomic, assign) NSInteger columnGap;
+@property (nonatomic, assign) NSInteger columnCount;
 
 /**
  @name Working with Custom Subviews
