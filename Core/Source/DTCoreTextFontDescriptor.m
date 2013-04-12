@@ -1,12 +1,13 @@
 //
 //  DTCoreTextFontDescriptor.m
-//  CoreTextExtensions
+//  DTCoreText
 //
 //  Created by Oliver Drobnik on 1/26/11.
 //  Copyright 2011 Drobnik.com. All rights reserved.
 //
 
 #import "DTCoreTextFontDescriptor.h"
+#import "DTCoreTextFontCollection.h"
 #import "DTVersion.h"
 
 static NSCache *_fontCache = nil;
@@ -15,6 +16,14 @@ static dispatch_queue_t _fontQueue;
 
 // adds "STHeitiSC-Light" font for cascading fix on iOS 5
 static BOOL _needsChineseFontCascadeFix = NO;
+
+@interface DTCoreTextFontDescriptor ()
+
+// gets descriptors of all available fonts from system and registers them as overrides
++ (void)_loadAvailableFontsIntoOverrideTable;
+
+@end
+
 
 @implementation DTCoreTextFontDescriptor
 {
@@ -41,6 +50,10 @@ static BOOL _needsChineseFontCascadeFix = NO;
 		// init/load of overrides
 		_fontOverrides = [[NSMutableDictionary alloc] init];
 		
+		// first we load the available system fonts for quick lookup
+		[DTCoreTextFontDescriptor _loadAvailableFontsIntoOverrideTable];
+		
+		// then - if it exists - we override from the plist
 		NSString *path = [[NSBundle mainBundle] pathForResource:@"DTCoreTextFontOverrides" ofType:@"plist"];
 		NSArray *fileArray = [NSArray arrayWithContentsOfFile:path];
 		
@@ -75,6 +88,36 @@ static BOOL _needsChineseFontCascadeFix = NO;
 		_needsChineseFontCascadeFix = YES;
 	}
 #endif
+}
+
+// gets descriptors of all available fonts from system and registers them as overrides
++ (void)_loadAvailableFontsIntoOverrideTable
+{
+	DTCoreTextFontCollection *allFonts = [DTCoreTextFontCollection availableFontsCollection];
+	
+	// sort font descriptors by name so that shorter names are preferred
+	
+	NSSortDescriptor *sort1 = [NSSortDescriptor sortDescriptorWithKey:@"fontFamily" ascending:YES];
+	NSSortDescriptor *sort2 = [NSSortDescriptor sortDescriptorWithKey:@"fontName" ascending:YES];
+	NSArray *sortedFonts = [[allFonts fontDescriptors] sortedArrayUsingDescriptors:[NSArray arrayWithObjects:sort1, sort2, nil]];
+	
+	for (DTCoreTextFontDescriptor *oneFontDescriptor in sortedFonts)
+	{
+		NSString *existingOverride = [DTCoreTextFontDescriptor overrideFontNameforFontFamily:oneFontDescriptor.fontFamily bold:oneFontDescriptor.boldTrait italic:oneFontDescriptor.italicTrait];
+		
+		if (!existingOverride)
+		{
+			[DTCoreTextFontDescriptor setOverrideFontName:oneFontDescriptor.fontName forFontFamily:oneFontDescriptor.fontFamily bold:oneFontDescriptor.boldTrait italic:oneFontDescriptor.italicTrait];
+		}
+		else
+		{
+			// prefer fonts with shorter name, there are probably "more correct". e.g. Helvetica-Oblique instead of Helvetica-LightOblique
+			if ([existingOverride length]>[oneFontDescriptor.fontName length])
+			{
+				[DTCoreTextFontDescriptor setOverrideFontName:oneFontDescriptor.fontName forFontFamily:oneFontDescriptor.fontFamily bold:oneFontDescriptor.boldTrait italic:oneFontDescriptor.italicTrait];
+			}
+		}
+	}
 }
 
 + (void)setSmallCapsFontName:(NSString *)fontName forFontFamily:(NSString *)fontFamily bold:(BOOL)bold italic:(BOOL)italic

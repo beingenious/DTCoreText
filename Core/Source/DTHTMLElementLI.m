@@ -13,22 +13,25 @@
 
 - (NSUInteger)_indexOfListItemInListRoot:(DTHTMLElement *)listRoot
 {
-	NSInteger index = -1;
-	
-	for (DTHTMLElement *oneElement in listRoot.childNodes)
+	@synchronized(self)
 	{
-		if ([oneElement isKindOfClass:[DTHTMLElementLI class]])
+		NSInteger index = -1;
+		
+		for (DTHTMLElement *oneElement in listRoot.childNodes)
 		{
-			index++;
+			if ([oneElement isKindOfClass:[DTHTMLElementLI class]])
+			{
+				index++;
+			}
+			
+			if (oneElement == self)
+			{
+				break;
+			}
 		}
 		
-		if (oneElement == self)
-		{
-			break;
-		}
+		return index;
 	}
-	
-	return index;
 }
 
 - (NSAttributedString *)attributedString
@@ -45,9 +48,14 @@
 	DTHTMLElementLI *tmpCopy = [[DTHTMLElementLI alloc] init];
 	[tmpCopy inheritAttributesFromElement:self];
 	
-	// force bullet font to be Times New Roman because iOS 6 has a larger level 3 bullet
-	tmpCopy.fontDescriptor = listRoot.fontDescriptor;
-	tmpCopy.fontDescriptor.fontFamily = @"Times New Roman";
+	DTCSSListStyleType type = listRoot.listStyle.type;
+    // Only force Times New Roman if bullet types
+    if (type == DTCSSListStyleTypeCircle || type == DTCSSListStyleTypeSquare || type == DTCSSListStyleTypeDisc)
+    {
+        // force bullet font to be Times New Roman because iOS 6 has a larger level 3 bullet
+        tmpCopy.fontDescriptor = listRoot.fontDescriptor;
+        tmpCopy.fontDescriptor.fontFamily = @"Times New Roman";
+    }
 	
 	// take the parents text color
 	tmpCopy.textColor = listRoot.textColor;

@@ -1,9 +1,9 @@
 //
 //  DTLazyImageView.m
-//  PagingTextScroller
+//  DTCoreText
 //
 //  Created by Oliver Drobnik on 5/20/11.
-//  Copyright 2011 . All rights reserved.
+//  Copyright 2011 Drobnik.com. All rights reserved.
 //
 
 #import "DTLazyImageView.h"
@@ -90,8 +90,9 @@ NSString * const DTLazyImageViewDidFinishDownloadNotification = @"DTLazyImageVie
 			_fullWidth = image.size.width;
 			_fullHeight = image.size.height;
 			
-			// for unknown reasons direct notify does not work below iOS 5
-			[self performSelector:@selector(_notifyDelegate) withObject:nil afterDelay:0.0];
+			// this has to be synchronous
+			[self _notifyDelegate];
+			
 			return;
 		}
 		

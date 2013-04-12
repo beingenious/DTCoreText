@@ -1,6 +1,6 @@
 //
 //  DemoTextViewController.m
-//  CoreTextExtensions
+//  DTCoreText
 //
 //  Created by Oliver Drobnik on 1/9/11.
 //  Copyright 2011 Drobnik.com. All rights reserved.
@@ -154,12 +154,14 @@
 	};
 	
 	NSMutableDictionary *options = [NSMutableDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithFloat:1.0], NSTextSizeMultiplierDocumentOption, [NSValue valueWithCGSize:maxImageSize], DTMaxImageSize,
-							 @"Times New Roman", DTDefaultFontFamily,  @"purple", DTDefaultLinkColor, callBackBlock, DTWillFlushBlockCallBack, nil];
+							 @"Times New Roman", DTDefaultFontFamily,  @"purple", DTDefaultLinkColor, @"red", DTDefaultLinkHighlightColor, callBackBlock, DTWillFlushBlockCallBack, nil];
 	
 	if (useiOS6Attributes)
 	{
 		[options setObject:[NSNumber numberWithBool:YES] forKey:DTUseiOS6Attributes];
 	}
+	
+	[options setObject:[NSURL fileURLWithPath:readmePath] forKey:NSBaseURLDocumentOption];
 	
 	NSAttributedString *string = [[NSAttributedString alloc] initWithHTMLData:data options:options documentAttributes:NULL];
 	
@@ -174,7 +176,7 @@
 	_textView.frame = bounds;
 
 	// Display string
-	//_textView.shouldDrawLinks = NO; // we draw them in DTLinkButton
+	_textView.shouldDrawLinks = NO; // we draw them in DTLinkButton
 	_textView.attributedString = [self _attributedStringForSnippetUsingiOS6Attributes:NO];
 	
 	[self _segmentedControlChanged:nil];
@@ -309,20 +311,13 @@
 	button.minimumHitSize = CGSizeMake(25, 25); // adjusts it's bounds so that button is always large enough
 	button.GUID = identifier;
 	
-	// we draw the contents ourselves
-	button.attributedString = string;
+	// get image with normal link text
+	UIImage *normalImage = [attributedTextContentView contentImageWithBounds:frame options:DTCoreTextLayoutFrameDrawingDefault];
+	[button setImage:normalImage forState:UIControlStateNormal];
 	
-	// make a version with different text color
-	NSMutableAttributedString *highlightedString = [string mutableCopy];
-	
-	NSRange range = NSMakeRange(0, highlightedString.length);
-	
-	NSDictionary *highlightedAttributes = [NSDictionary dictionaryWithObject:(__bridge id)[UIColor redColor].CGColor forKey:(id)kCTForegroundColorAttributeName];
-	
-	
-	[highlightedString addAttributes:highlightedAttributes range:range];
-	
-	button.highlightedAttributedString = highlightedString;
+	// get image for highlighted link text
+	UIImage *highlightImage = [attributedTextContentView contentImageWithBounds:frame options:DTCoreTextLayoutFrameDrawingDrawLinksHighlighted];
+	[button setImage:highlightImage forState:UIControlStateHighlighted];
 	
 	// use normal push action for opening URL
 	[button addTarget:self action:@selector(linkPushed:) forControlEvents:UIControlEventTouchUpInside];
@@ -428,7 +423,19 @@
 			// NOTE: this is a hack, you probably want to use your own image view and touch handling
 			// also, this treats an image with a hyperlink by itself because we don't have the GUID of the link parts
 			imageView.userInteractionEnabled = YES;
-			DTLinkButton *button = (DTLinkButton *)[self attributedTextContentView:attributedTextContentView viewForLink:attachment.hyperLinkURL identifier:attachment.hyperLinkGUID frame:imageView.bounds];
+			
+			DTLinkButton *button = [[DTLinkButton alloc] initWithFrame:imageView.bounds];
+			button.URL = attachment.hyperLinkURL;
+			button.minimumHitSize = CGSizeMake(25, 25); // adjusts it's bounds so that button is always large enough
+			button.GUID = attachment.hyperLinkGUID;
+			
+			// use normal push action for opening URL
+			[button addTarget:self action:@selector(linkPushed:) forControlEvents:UIControlEventTouchUpInside];
+			
+			// demonstrate combination with long press
+			UILongPressGestureRecognizer *longPress = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(linkLongPressed:)];
+			[button addGestureRecognizer:longPress];
+			
 			[imageView addSubview:button];
 		}
 		
@@ -436,7 +443,6 @@
 	}
 	else if (attachment.contentType == DTTextAttachmentTypeIframe)
 	{
-		frame.origin.x += 50;
 		DTWebVideoView *videoView = [[DTWebVideoView alloc] initWithFrame:frame];
 		videoView.attachment = attachment;
 		
@@ -460,7 +466,7 @@
 
 - (BOOL)attributedTextContentView:(DTAttributedTextContentView *)attributedTextContentView shouldDrawBackgroundForTextBlock:(DTTextBlock *)textBlock frame:(CGRect)frame context:(CGContextRef)context forLayoutFrame:(DTCoreTextLayoutFrame *)layoutFrame
 {
-	UIBezierPath *roundedRect = [UIBezierPath bezierPathWithRoundedRect:frame cornerRadius:10];
+	UIBezierPath *roundedRect = [UIBezierPath bezierPathWithRoundedRect:CGRectInset(frame,1,1) cornerRadius:10];
 
 	CGColorRef color = [textBlock.backgroundColor CGColor];
 	if (color)
@@ -554,11 +560,8 @@
 		}
 	}
 	
-	// need to reset the layouter because otherwise we get the old framesetter or cached layout frames
-	_textView.attributedTextContentView.layouter=nil;
-	
-	// here we're layouting the entire string, might be more efficient to only relayout the paragraphs that contain these attachments
-	[_textView.attributedTextContentView relayoutText];
+	// layout might have changed due to image sizes
+	[_textView relayoutText];
 }
 
 #pragma mark Properties

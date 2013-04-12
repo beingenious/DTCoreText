@@ -1,6 +1,6 @@
 //
 //  DTTextAttachment.h
-//  CoreTextExtensions
+//  DTCoreText
 //
 //  Created by Oliver on 14.01.11.
 //  Copyright 2011 Drobnik.com. All rights reserved.
@@ -102,6 +102,15 @@ typedef enum
 @property (nonatomic, assign) CGSize displaySize;
 
 /**
+ Updates the display size optionally passing a maximum size that it should not exceed.
+ 
+ This method in contrast to using the displaySize property will use the originalSize and max display size to calculate missing dimensions.
+ @param displaySize The new size to display the content with
+ @param maxDisplaySize the maximum size that the content should be scaled to fit
+ */
+- (void)setDisplaySize:(CGSize)displaySize withMaxDisplaySize:(CGSize)maxDisplaySize;
+
+/**
  The contents of the receiver
  */
 @property (nonatomic, strong) id contents;
@@ -130,5 +139,10 @@ typedef enum
  The attributes dictionary of the attachment
  */
 @property (nonatomic, strong) NSDictionary *attributes;
+
+/**
+ The DTHTMLElement child nodes of the receiver. This array is only used for object tags at the moment.
+ */
+@property (nonatomic, strong) NSArray *childNodes;
 
 @end

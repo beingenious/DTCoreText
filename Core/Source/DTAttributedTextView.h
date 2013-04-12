@@ -1,6 +1,6 @@
 //
 //  DTAttributedTextView.h
-//  CoreTextExtensions
+//  DTCoreText
 //
 //  Created by Oliver Drobnik on 1/12/11.
 //  Copyright 2011 Drobnik.com. All rights reserved.
@@ -17,6 +17,10 @@
  */
 
 @interface DTAttributedTextView : UIScrollView
+{
+	// ivars needed by subclasses
+	DTAttributedTextContentView *_attributedTextContentView;
+}
 
 /**
  @name Providing Content
@@ -33,6 +37,11 @@
  */
 @property (nonatomic, unsafe_unretained) IBOutlet id <DTAttributedTextContentViewDelegate> textDelegate;
 
+
+/**
+ Performs a new layout pass on the receiver. This destroys the frame setter, calls relayoutText on the content view and marks the receiver as needing layout so that custom subviews get appropriately sized.
+ */
+- (void)relayoutText;
 
 /**
  @name Accessing Subviews

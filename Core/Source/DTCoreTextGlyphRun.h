@@ -1,6 +1,6 @@
 //
 //  DTCoreTextGlyphRun.h
-//  CoreTextExtensions
+//  DTCoreText
 //
 //  Created by Oliver Drobnik on 1/25/11.
 //  Copyright 2011 Drobnik.com. All rights reserved.
@@ -46,9 +46,16 @@
 
 /**
  Draws the receiver into the given context with the position that it derives from the layout line it belongs to.
+ @see drawDecorationInContext: for drawing the receiver's decoration
  @param context The graphics context to draw into
  */
 - (void)drawInContext:(CGContextRef)context;
+
+/**
+ Draws the receiver's decoration into the given context with the position that it derives from the layout line it belongs to. Decoration is background highlighting, underline and strike-through.
+ @param context The graphics context to draw into
+ */
+- (void)drawDecorationInContext:(CGContextRef)context;
 
 
 /**
@@ -100,6 +107,13 @@
  Returns `YES` if the receiver is part of a hyperlink, `NO` otherwise
  */
 @property (nonatomic, assign, readonly, getter=isHyperlink) BOOL hyperlink;
+
+/**
+ Returns `YES` if the receiver represents trailing whitespace in a line.
+ 
+ This can be used to avoid drawing of background color, strikeout or underline for empty trailing white space glyph runs.
+ */
+- (BOOL)isTrailingWhitespace;
 
 /**
  The ascent (height above the baseline) of the receiver

@@ -24,10 +24,22 @@
  */
 - (NSString *)HTMLString;
 
+
+/**
+ Generates a HTML fragment representation of the attributed string including inlined styles and no html or head elements
+ @returns The generated string
+ */
+- (NSString *)HTMLFragment;
+
 /**
  If specified then all absolute font sizes (px) will be divided by this value. This is useful if you specified a text size multiplicator when converting HTML to the attributed string you are processing.
  */
 @property (nonatomic, assign) CGFloat textScale;
+
+/**
+ If YES, preserve whitespaces in HTML by using "Apple-converted-space". Default YES.
+ */
+@property (nonatomic, assign) BOOL useAppleConvertedSpace;
 
 /**
  The attributed string that the writer is processing.

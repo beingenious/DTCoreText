@@ -217,6 +217,15 @@
 	return [writer HTMLString];
 }
 
+- (NSString *)htmlFragment
+{
+	// create a writer
+	DTHTMLWriter *writer = [[DTHTMLWriter alloc] initWithAttributedString:self];
+	
+	// return it's output
+	return [writer HTMLFragment];
+}
+
 - (NSString *)plainTextString
 {
 	NSString *tmpString = [self string];
@@ -336,7 +345,7 @@
 	}
 	
 	// add a marker so that we know that this is a field/prefix
-	[newAttributes setObject:@"{listprefix}" forKey:DTFieldAttribute];
+	[newAttributes setObject:DTListPrefixField forKey:DTFieldAttribute];
 	
 	NSString *prefix = [listStyle prefixWithCounter:listCounter];
 	

@@ -32,7 +32,13 @@
 {
 	NSData *data = [HTMLString dataUsingEncoding:NSUTF8StringEncoding];
 	
-	DTHTMLAttributedStringBuilder *builder = [[DTHTMLAttributedStringBuilder alloc] initWithHTML:data options:nil documentAttributes:NULL];
+	// set the base URL so that resources are found in the resource bundle
+	NSBundle *bundle = [NSBundle bundleForClass:[self class]];
+	NSURL *baseURL = [bundle resourceURL];
+	
+	NSDictionary *options = @{NSBaseURLDocumentOption: baseURL};
+	
+	DTHTMLAttributedStringBuilder *builder = [[DTHTMLAttributedStringBuilder alloc] initWithHTML:data options:options documentAttributes:NULL];
 	return [builder generatedAttributedString];
 }
 
@@ -92,11 +98,12 @@
 	STAssertTrue(styleNatural.baseWritingDirection == NSWritingDirectionNatural, @"Writing direction is not Natural");
 }
 
+
+
+// parser should get the displaySize and originalSize from local image
 - (void)testAttachmentDisplaySize
 {
-	NSBundle *bundle = [NSBundle bundleForClass:[self class]];
-	NSString *imagePath = [bundle pathForResource:@"Oliver" ofType:@"jpg"];
-	NSString *string = [NSString stringWithFormat:@"<img src=\"file:%@\" style=\"foo:bar\">", imagePath];
+	NSString *string = [NSString stringWithFormat:@"<img src=\"Oliver.jpg\" style=\"foo:bar\">"];
 	NSAttributedString *output = [self _attributedStringFromHTMLString:string];
 
 	STAssertEquals([output length],(NSUInteger)1 , @"Output length should be 1");
@@ -106,8 +113,27 @@
 	STAssertNotNil(attachment, @"No attachment found in output");
 	
 	CGSize expectedSize = CGSizeMake(300, 300);
-	STAssertEquals(attachment.originalSize, expectedSize, @"Expected displaySize to be 300x300");
+	STAssertEquals(attachment.originalSize, expectedSize, @"Expected originalSize to be 300x300");
 	STAssertEquals(attachment.displaySize, expectedSize, @"Expected displaySize to be 300x300");
+}
+
+// parser should ignore "auto" value for height
+- (void)testAttachmentAutoSize
+{
+	NSString *string = [NSString stringWithFormat:@"<img src=\"Oliver.jpg\" style=\"width:260px; height:auto;\">"];
+	NSAttributedString *output = [self _attributedStringFromHTMLString:string];
+	
+	STAssertEquals([output length],(NSUInteger)1 , @"Output length should be 1");
+	
+	DTTextAttachment *attachment = [output attribute:NSAttachmentAttributeName atIndex:0 effectiveRange:NULL];
+	
+	STAssertNotNil(attachment, @"No attachment found in output");
+	
+	CGSize expectedOriginalSize = CGSizeMake(300, 300);
+	CGSize expectedDisplaySize = CGSizeMake(260, 260);
+	
+	STAssertEquals(attachment.originalSize, expectedOriginalSize, @"Expected originalSize to be 300x300");
+	STAssertEquals(attachment.displaySize, expectedDisplaySize, @"Expected displaySize to be 260x260");
 }
 
 - (void)testFontTagWithStyle
@@ -120,6 +146,20 @@
 	
 	STAssertEquals(pointSize, (CGFloat)23.0f, @"Font Size should be 23 px (= 17 pt)");
 }
+
+// parser should recover from no end element being sent for this img
+- (void)testMissingClosingBracket
+{
+	NSString *string = [NSString stringWithFormat:@"<img src=\"Oliver.jpg\""];
+	NSAttributedString *output = [self _attributedStringFromHTMLString:string];
+	
+	STAssertEquals([output length],(NSUInteger)1 , @"Output length should be 1");
+	
+	DTTextAttachment *attachment = [output attribute:NSAttachmentAttributeName atIndex:0 effectiveRange:NULL];
+	
+	STAssertNotNil(attachment, @"No attachment found in output");
+}
+
 
 - (void)testRTLParsing
 {
@@ -215,5 +255,99 @@
 	}
 }
 
+
+// if there is a text attachment contained in a HREF then the URL of that needs to be transferred to the image because it is needed for affixing a custom subview for a link button over the image or 
+- (void)testTransferOfHyperlinkURLToAttachment
+{
+	NSAttributedString *string = [self _attributedStringFromHTMLString:@"<a href=\"https://www.cocoanetics.com\"><img class=\"Bla\" style=\"width:150px; height:150px\" src=\"Oliver.jpg\"></a>"];
+	
+	STAssertEquals([string length], (NSUInteger)1, @"Output length should be 1");
+	
+	// get the attachment
+	DTTextAttachment *attachment = [string attribute:NSAttachmentAttributeName atIndex:0 effectiveRange:NULL];
+	
+	STAssertNotNil(attachment, @"Attachment is missing");
+	
+	// get the link
+	NSURL *URL = [string attribute:DTLinkAttribute atIndex:0 effectiveRange:NULL];
+	
+	STAssertNotNil(URL, @"Element URL is nil");
+	
+	STAssertEqualObjects(URL, attachment.hyperLinkURL, @"Attachment URL and element URL should match!");
+}
+
+
+// setting ordered list starting number
+- (void)testOrderedListStartingNumber
+{
+	NSAttributedString *attributedString = [self _attributedStringFromHTMLString:@"<ol start=\"5\">\n<li>Item #5</li>\n<li>Item #6</li>\n<li>etc.</li>\n</ol>"];
+	NSString *string = [attributedString string];
+	
+	NSArray *lines = [string componentsSeparatedByString:@"\n"];
+	
+	STAssertEquals([lines count], (NSUInteger)4, @"There should be 4 lines"); // last one is empty
+	
+	NSString *line1 = lines[0];
+	STAssertTrue([line1 hasPrefix:@"\t5."], @"String should have prefix 5. on first item");
+	
+	NSString *line2 = lines[1];
+	STAssertTrue([line2 hasPrefix:@"\t6."], @"String should have prefix 6. on third item");
+	
+	NSString *line3 = lines[2];
+	STAssertTrue([line3 hasPrefix:@"\t7."], @"String should have prefix 7. on third item");
+}
+
+// testing if Helvetica font family returns the correct font
+- (void)testHelveticaVariants
+{
+	NSAttributedString *attributedString = [self _attributedStringFromHTMLString:@"<p style=\"font-family:Helvetica\">Regular</p><p style=\"font-family:Helvetica\"><b>Bold</b></p><p style=\"font-family:Helvetica\"><i>Italic</i></p><p style=\"font-family:Helvetica\"><b><i>Bold+Italic</i></b></p>"];
+	
+	NSString *string = [attributedString string];
+	NSRange entireStringRange = NSMakeRange(0, [string length]);
+	
+	__block NSUInteger lineNumber = 0;
+	
+	[string enumerateSubstringsInRange:entireStringRange options:NSStringEnumerationByParagraphs usingBlock:^(NSString *substring, NSRange substringRange, NSRange enclosingRange, BOOL *stop) {
+		
+		NSRange fontRange;
+		CTFontRef font = (__bridge CTFontRef)([attributedString attribute:(id)kCTFontAttributeName atIndex:substringRange.location effectiveRange:&fontRange]);
+		
+		STAssertEquals(enclosingRange, fontRange, @"Font should be on entire string");
+		
+		DTCoreTextFontDescriptor *fontDescriptor = [DTCoreTextFontDescriptor fontDescriptorForCTFont:font];
+		
+		switch (lineNumber) {
+			case 0:
+			{
+				STAssertEqualObjects(fontDescriptor.fontFamily, @"Helvetica", @"Font family should be Helvetica");
+				STAssertEqualObjects(fontDescriptor.fontName, @"Helvetica", @"Font face should be Helvetica");
+				break;
+			}
+
+			case 1:
+			{
+				STAssertEqualObjects(fontDescriptor.fontFamily, @"Helvetica", @"Font family should be Helvetica");
+				STAssertEqualObjects(fontDescriptor.fontName, @"Helvetica-Bold", @"Font face should be Helvetica");
+				break;
+			}
+			case 2:
+			{
+				STAssertEqualObjects(fontDescriptor.fontFamily, @"Helvetica", @"Font family should be Helvetica");
+				STAssertEqualObjects(fontDescriptor.fontName, @"Helvetica-Oblique", @"Font face should be Helvetica-Oblique");
+				break;
+			}
+			case 3:
+			{
+				STAssertEqualObjects(fontDescriptor.fontFamily, @"Helvetica", @"Font family should be Helvetica");
+				STAssertEqualObjects(fontDescriptor.fontName, @"Helvetica-BoldOblique", @"Font face should be Helvetica-BoldOblique");
+				break;
+			}
+			default:
+				break;
+		}
+		
+		lineNumber++;
+	}];
+}
 
 @end
