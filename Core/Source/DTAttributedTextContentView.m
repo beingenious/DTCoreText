@@ -52,6 +52,8 @@ NSString * const DTAttributedTextContentViewDidFinishLayoutNotification = @"DTAt
 @property (nonatomic, strong) NSMutableDictionary *customViewsForAttachmentsIndex;
 @property (nonatomic, strong) NSMutableSet *customViews;
 
+@property (nonatomic, strong) CATiledLayer *maintainLayer;
+
 - (void)removeAllCustomViews;
 - (void)removeAllCustomViewsForLinks;
 - (void)removeSubviewsOutsideRect:(CGRect)rect;
@@ -108,8 +110,8 @@ static Class _layerClassToUseForDTAttributedTextContentView = nil;
 	}
 	
 	// set tile size if applicable
-	CATiledLayer *layer = (id)self.layer;
-	if ([layer isKindOfClass:[CATiledLayer class]])
+	self.maintainLayer = (id)self.layer;
+	if ([self.maintainLayer isKindOfClass:[CATiledLayer class]])
 	{
 		// get larger dimension and multiply by scale
 		UIScreen *mainScreen = [UIScreen mainScreen];
@@ -118,7 +120,7 @@ static Class _layerClassToUseForDTAttributedTextContentView = nil;
 		
 		// this way tiles cover entire screen regardless of orientation or scale
 		CGSize tileSize = CGSizeMake(largerDimension * scale, largerDimension * scale);
-		layer.tileSize = tileSize;
+		self.maintainLayer.tileSize = tileSize;
 		
 		_isTiling = YES;
 	}
@@ -440,6 +442,14 @@ static Class _layerClassToUseForDTAttributedTextContentView = nil;
 	for (DTCoreTextLayoutFrame *lframe in self.layoutFrames) {
 		[lframe drawInContext:context options:DTCoreTextLayoutFrameDrawingDefault];
 	}
+}
+
+- (void)layoutText
+{
+    if (!_layoutFrames) {
+        [self setNeedsDisplayInRect:self.bounds];
+        [self setNeedsLayout];
+    }
 }
 
 - (void)relayoutText
@@ -956,6 +966,7 @@ static Class _layerClassToUseForDTAttributedTextContentView = nil;
 
 @synthesize columnCount = _columnCount;
 @synthesize columnGap = _columnGap;
+@synthesize averageLineHeight = _averageLineHeight;
 
 @end
 

@@ -172,6 +172,7 @@ typedef NSUInteger DTAttributedTextContentViewRelayoutMask;
  */
 - (void)relayoutText;
 
+- (void)layoutText;
 
 /**
  The layouter to use for the receiver. Created by default.
@@ -203,6 +204,7 @@ typedef NSUInteger DTAttributedTextContentViewRelayoutMask;
  */
 @property (nonatomic, assign) NSInteger columnGap;
 @property (nonatomic, assign) NSInteger columnCount;
+@property (nonatomic) NSInteger averageLineHeight;
 
 /**
  @name Working with Custom Subviews

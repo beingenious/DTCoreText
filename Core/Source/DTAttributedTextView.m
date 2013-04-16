@@ -109,11 +109,11 @@
 		DTCoreTextLayoutLine *line = [self.attributedTextContentView.layoutFrame lineContainingIndex:range.location];
 		
 		// make sure we don't scroll too far
-		CGFloat maxScrollPos = self.contentSize.height - self.bounds.size.height + self.contentInset.bottom + self.contentInset.top;
-		CGFloat scrollPos = MIN(line.frame.origin.y, maxScrollPos);
-		
-		// scroll
-		[self setContentOffset:CGPointMake(0, scrollPos) animated:animated];
+//		CGFloat maxScrollPos = self.contentSize.height - self.bounds.size.height + self.contentInset.bottom + self.contentInset.top;
+//		CGFloat scrollPos = MIN(line.frame.origin.y, maxScrollPos);
+//		
+//		// scroll
+//		[self setContentOffset:CGPointMake(0, scrollPos) animated:animated];
 	}
 }
 
@@ -141,13 +141,14 @@
 	NSDictionary *userInfo = [notification userInfo];
 	CGRect optimalFrame = [[userInfo objectForKey:@"OptimalFrame"] CGRectValue];
 	
-	CGRect frame = UIEdgeInsetsInsetRect(self.bounds, self.contentInset);
+//	CGRect frame = UIEdgeInsetsInsetRect(self.bounds, self.contentInset);
+	CGRect frame = UIEdgeInsetsInsetRect(self.bounds, UIEdgeInsetsMake(15, 15, 15, 15));
 	
 	// ignore possibly delayed layout notification for a different width
 	if (optimalFrame.size.width == frame.size.width)
 	{
 		_attributedTextContentView.frame = optimalFrame;
-		self.contentSize = [_attributedTextContentView intrinsicContentSize];
+//		self.contentSize = [_attributedTextContentView intrinsicContentSize];
 	}
 }
 
@@ -159,7 +160,9 @@
 		// subclasses can specify a DTAttributedTextContentView subclass instead
 		Class classToUse = [self classForContentView];
 		
-		CGRect frame = UIEdgeInsetsInsetRect(self.bounds, self.contentInset);
+//		CGRect frame = UIEdgeInsetsInsetRect(self.bounds, self.contentInset);
+		CGRect frame = UIEdgeInsetsInsetRect(self.bounds, UIEdgeInsetsMake(15, 15, 15, 15));
+//		CGRect frame = self.bounds;
 		
 		if (frame.size.width<=0 || frame.size.height<=0)
 		{
@@ -228,15 +231,15 @@
 
 - (void)setContentInset:(UIEdgeInsets)contentInset
 {
-	if (!UIEdgeInsetsEqualToEdgeInsets(self.contentInset, contentInset))
-	{
-		[super setContentInset:contentInset];
-		
-		// height does not matter, that will be determined anyhow
-		CGRect contentFrame = CGRectMake(0, 0, self.frame.size.width - self.contentInset.left - self.contentInset.right, _attributedTextContentView.frame.size.height);
-		
-		_attributedTextContentView.frame = contentFrame;
-	}
+//	if (!UIEdgeInsetsEqualToEdgeInsets(self.contentInset, contentInset))
+//	{
+//		[super setContentInset:contentInset];
+//		
+//		// height does not matter, that will be determined anyhow
+//		CGRect contentFrame = CGRectMake(0, 0, self.frame.size.width - self.contentInset.left - self.contentInset.right, _attributedTextContentView.frame.size.height);
+//		
+//		_attributedTextContentView.frame = contentFrame;
+//	}
 }
 
 - (UIView *)backgroundView
@@ -321,9 +324,12 @@
 		if (oldFrame.size.width != frame.size.width)
 		{
 			// height does not matter, that will be determined anyhow
-			CGRect contentFrame = CGRectMake(0, 0, frame.size.width - self.contentInset.left - self.contentInset.right, _attributedTextContentView.frame.size.height);
-			
+			UIEdgeInsets contentInset = UIEdgeInsetsMake(15, 15, 15, 15);
+
+			CGRect contentFrame = CGRectMake(0, 0, frame.size.width - contentInset.left - contentInset.right, _attributedTextContentView.frame.size.height);
+//
 			_attributedTextContentView.frame = contentFrame;
+//			_attributedTextContentView.frame = CGRectMake(0, 0, frame.size.width, frame.size.height);
 		}
 	}
 }

@@ -16,7 +16,7 @@
  The content view of type <DTAttributedTextContentView> is created lazily. You should not set values on it directly if you use it in conjunction with this class for scrolling.
  */
 
-@interface DTAttributedTextView : UIScrollView
+@interface DTAttributedTextView : UIView
 {
 	// ivars needed by subclasses
 	DTAttributedTextContentView *_attributedTextContentView;
