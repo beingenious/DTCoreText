@@ -142,7 +142,8 @@
 	CGRect optimalFrame = [[userInfo objectForKey:@"OptimalFrame"] CGRectValue];
 	
 //	CGRect frame = UIEdgeInsetsInsetRect(self.bounds, self.contentInset);
-	CGRect frame = UIEdgeInsetsInsetRect(self.bounds, UIEdgeInsetsMake(15, 15, 15, 15));
+//	CGRect frame = UIEdgeInsetsInsetRect(self.bounds, UIEdgeInsetsMake(15, 15, 15, 15));
+	CGRect frame = self.bounds;
 	
 	// ignore possibly delayed layout notification for a different width
 	if (optimalFrame.size.width == frame.size.width)
