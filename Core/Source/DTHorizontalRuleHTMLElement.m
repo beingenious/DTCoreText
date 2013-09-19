@@ -6,13 +6,13 @@
 //  Copyright (c) 2012 Drobnik.com. All rights reserved.
 //
 
-#import "DTHTMLElementHR.h"
+#import "DTHorizontalRuleHTMLElement.h"
 
-@implementation DTHTMLElementHR
+@implementation DTHorizontalRuleHTMLElement
 
-- (NSDictionary *)attributesDictionary
+- (NSDictionary *)attributesForAttributedStringRepresentation
 {
-	NSMutableDictionary *dict = [[super attributesDictionary] mutableCopy];
+	NSMutableDictionary *dict = [[super attributesForAttributedStringRepresentation] mutableCopy];
 	[dict setObject:[NSNumber numberWithBool:YES] forKey:DTHorizontalRuleStyleAttribute];
 	
 	return dict;
@@ -22,7 +22,7 @@
 {
 	@synchronized(self)
 	{
-		NSDictionary *attributes = [self attributesDictionary];
+		NSDictionary *attributes = [self attributesForAttributedStringRepresentation];
 		return [[NSAttributedString alloc] initWithString:@"\n" attributes:attributes];
 	}
 }

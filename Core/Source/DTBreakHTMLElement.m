@@ -6,15 +6,15 @@
 //  Copyright (c) 2012 Drobnik.com. All rights reserved.
 //
 
-#import "DTHTMLElementBR.h"
+#import "DTBreakHTMLElement.h"
 
-@implementation DTHTMLElementBR
+@implementation DTBreakHTMLElement
 
 - (NSAttributedString *)attributedString
 {
 	@synchronized(self)
 	{
-		NSDictionary *attributes = [self attributesDictionary];
+		NSDictionary *attributes = [self attributesForAttributedStringRepresentation];
 		return [[NSAttributedString alloc] initWithString:UNICODE_LINE_FEED attributes:attributes];
 	}
 }

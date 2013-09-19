@@ -6,14 +6,14 @@
 //  Copyright (c) 2012 Drobnik.com. All rights reserved.
 //
 
-#import "DTHTMLElementAttachment.h"
+#import "DTTextAttachmentHTMLElement.h"
 
 #import "DTHTMLElement.h"
 #import "DTTextAttachment.h"
 #import "DTCoreTextParagraphStyle.h"
 #import "NSMutableAttributedString+HTML.h"
 
-@implementation DTHTMLElementAttachment
+@implementation DTTextAttachmentHTMLElement
 {
 	CGSize _maxDisplaySize;
 }
@@ -58,7 +58,7 @@
 {
 	@synchronized(self)
 	{
-		NSDictionary *attributes = [self attributesDictionary];
+		NSDictionary *attributes = [self attributesForAttributedStringRepresentation];
 		
 		// ignore text, use unicode object placeholder
 		NSMutableAttributedString *tmpString = [[NSMutableAttributedString alloc] initWithString:UNICODE_OBJECT_PLACEHOLDER attributes:attributes];
@@ -88,6 +88,14 @@
 {
 	// element size is determined in super (tag attribute and style)
 	[super applyStyleDictionary:styles];
+	
+	// at this point we have the size from width/height attribute or style in _size
+	
+	// set original size if it was previously unknown
+	if (CGSizeEqualToSize(CGSizeZero, _textAttachment.originalSize))
+	{
+		_textAttachment.originalSize = _size;
+	}
 	
 	// update the display size
 	[_textAttachment setDisplaySize:_size withMaxDisplaySize:_maxDisplaySize];

@@ -9,6 +9,7 @@
 #import "DTAttributedTextView.h"
 #import "DTCoreText.h"
 #import <QuartzCore/QuartzCore.h>
+#import "DTTiledLayerWithoutFade.h"
 
 @interface DTAttributedTextView ()
 
@@ -23,7 +24,7 @@
 	UIView *_backgroundView;
 
 	// these are pass-through, i.e. store until the content view is created
-	__unsafe_unretained id textDelegate;
+	DT_WEAK_VARIABLE id textDelegate;
 	NSAttributedString *_attributedString;
 	
 	BOOL _shouldDrawLinks;
@@ -105,20 +106,31 @@
 	
 	if (range.length != NSNotFound)
 	{
-		// get the line of the first index of the anchor range
-		DTCoreTextLayoutLine *line = [self.attributedTextContentView.layoutFrame lineContainingIndex:range.location];
-		
-		// make sure we don't scroll too far
-//		CGFloat maxScrollPos = self.contentSize.height - self.bounds.size.height + self.contentInset.bottom + self.contentInset.top;
-//		CGFloat scrollPos = MIN(line.frame.origin.y, maxScrollPos);
-//		
-//		// scroll
-//		[self setContentOffset:CGPointMake(0, scrollPos) animated:animated];
+//		[self scrollRangeToVisible:range animated:animated];
 	}
+}
+
+- (void)scrollRangeToVisible:(NSRange)range animated:(BOOL)animated
+{
+	// get the line of the first index of the anchor range
+//	DTCoreTextLayoutLine *line = [self.attributedTextContentView.layoutFrame lineContainingIndex:range.location];
+	
+	// make sure we don't scroll too far
+//	CGFloat maxScrollPos = self.contentSize.height - self.bounds.size.height + self.contentInset.bottom + self.contentInset.top;
+//	CGFloat scrollPos = MIN(line.frame.origin.y, maxScrollPos);
+	
+	// scroll
+//	[self setContentOffset:CGPointMake(0, scrollPos) animated:animated];
 }
 
 - (void)relayoutText
 {
+	if (![NSThread isMainThread])
+	{
+		[self performSelectorOnMainThread:@selector(relayoutText) withObject:nil waitUntilDone:YES];
+		return;
+	}
+	
 	// need to reset the layouter because otherwise we get the old framesetter or cached layout frames
 	_attributedTextContentView.layouter=nil;
 	
@@ -129,10 +141,30 @@
 	[self setNeedsLayout];
 }
 
+#pragma mark - Working with a Cursor
+
+- (NSInteger)closestCursorIndexToPoint:(CGPoint)point
+{
+	// the point is in the coordinate system of the receiver, need to convert into those of the content view first
+	CGPoint pointInContentView = [self.attributedTextContentView convertPoint:point fromView:self];
+	
+	return [self.attributedTextContentView closestCursorIndexToPoint:pointInContentView];
+}
+
+- (CGRect)cursorRectAtIndex:(NSInteger)index
+{
+	CGRect rectInContentView = [self.attributedTextContentView cursorRectAtIndex:index];
+	
+	// the point is in the coordinate system of the content view, need to convert into those of the receiver first
+	CGRect rect = [self.attributedTextContentView convertRect:rectInContentView toView:self];
+	
+	return rect;
+}
+
 #pragma mark Notifications
 - (void)contentViewDidLayout:(NSNotification *)notification
 {
-	if (![NSThread mainThread])
+	if (![NSThread isMainThread])
 	{
 		[self performSelectorOnMainThread:@selector(contentViewDidLayout:) withObject:notification waitUntilDone:YES];
 		return;
@@ -142,7 +174,6 @@
 	CGRect optimalFrame = [[userInfo objectForKey:@"OptimalFrame"] CGRectValue];
 	
 //	CGRect frame = UIEdgeInsetsInsetRect(self.bounds, self.contentInset);
-//	CGRect frame = UIEdgeInsetsInsetRect(self.bounds, UIEdgeInsetsMake(15, 15, 15, 15));
 	CGRect frame = self.bounds;
 	
 	// ignore possibly delayed layout notification for a different width
@@ -170,7 +201,28 @@
 			frame = CGRectZero;
 		}
 		
+		// make sure we always have a tiled layer
+		Class previousLayerClass = nil;
+		
+		// for DTAttributedTextContentView subclasses we force a tiled layer
+		if ([classToUse isSubclassOfClass:[DTAttributedTextContentView class]])
+		{
+			Class layerClass = [DTAttributedTextContentView layerClass];
+			
+			if (![layerClass isSubclassOfClass:[CATiledLayer class]])
+			{
+				[DTAttributedTextContentView setLayerClass:[DTTiledLayerWithoutFade class]];
+				previousLayerClass = layerClass;
+			}
+		}
+		
 		_attributedTextContentView = [[classToUse alloc] initWithFrame:frame];
+		
+		// restore previous layer class if we changed the layer class for the content view
+		if (previousLayerClass)
+		{
+			[DTAttributedTextContentView setLayerClass:previousLayerClass];
+		}
 		
 		_attributedTextContentView.userInteractionEnabled = YES;
 		_attributedTextContentView.backgroundColor = self.backgroundColor;

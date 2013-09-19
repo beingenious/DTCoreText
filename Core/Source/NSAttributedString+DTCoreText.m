@@ -9,37 +9,47 @@
 #import "DTCoreText.h"
 #import "NSAttributedString+DTCoreText.h"
 #import "DTHTMLWriter.h"
+#import "NSURL+DTComparing.h"
 
 @implementation NSAttributedString (DTCoreText)
 
 #pragma mark Text Attachments
-- (NSArray *)textAttachmentsWithPredicate:(NSPredicate *)predicate
+- (NSArray *)textAttachmentsWithPredicate:(NSPredicate *)predicate class:(Class)class
 {
-	NSMutableArray *tmpArray = [NSMutableArray array];
-	
-	NSUInteger index = 0;
-	
-	while (index<[self length]) 
+	if (![self length])
 	{
-		NSRange range;
-		NSDictionary *attributes = [self attributesAtIndex:index effectiveRange:&range];
-		
-		DTTextAttachment *attachment = [attributes objectForKey:NSAttachmentAttributeName];
-		
-		if (attachment)
-		{
-			if ([predicate evaluateWithObject:attachment])
-			{
-				[tmpArray addObject:attachment];
-			}
-		}
-		
-		index += range.length;
+		return nil;
 	}
 	
-	if ([tmpArray count])
+	NSMutableArray *foundAttachments = [NSMutableArray array];
+	
+	NSRange entireRange = NSMakeRange(0, [self length]);
+	[self enumerateAttribute:NSAttachmentAttributeName inRange:entireRange options:NSAttributedStringEnumerationLongestEffectiveRangeNotRequired usingBlock:^(DTTextAttachment *attachment, NSRange range, BOOL *stop) {
+		
+		if (attachment == nil)
+		{
+			// no attachment value
+			return;
+		}
+		
+		if (predicate && ![predicate evaluateWithObject:attachment])
+		{
+			// doesn't fit predicate, next
+			return;
+		}
+		
+		if (class && ![attachment isKindOfClass:class])
+		{
+			// doesn't fit class, next
+			return;
+		}
+		
+		[foundAttachments addObject:attachment];
+	}];
+	
+	if ([foundAttachments count])
 	{
-		return tmpArray;
+		return foundAttachments;
 	}
 	
 	return nil;
@@ -117,6 +127,8 @@
 
 - (NSRange)_rangeOfObject:(id)object inArrayBehindAttribute:(NSString *)attribute atIndex:(NSUInteger)location
 {
+	@synchronized(self)
+	{
 	NSUInteger searchIndex = location;
 	
 	NSArray *arrayAtIndex;
@@ -179,15 +191,25 @@
 	}
 	
 	return NSMakeRange(minFoundIndex, maxFoundIndex-minFoundIndex);
+	}
 }
 
 - (NSRange)rangeOfTextList:(DTCSSListStyle *)list atIndex:(NSUInteger)location
 {
-	return [self _rangeOfObject:list inArrayBehindAttribute:DTTextListsAttribute atIndex:location];
+	NSParameterAssert(list);
+	
+	NSRange listRange = [self _rangeOfObject:list inArrayBehindAttribute:DTTextListsAttribute atIndex:location];
+	
+	// extend list range to full paragraphs to be safe
+	listRange = [self.string rangeOfParagraphsContainingRange:listRange parBegIndex:NULL parEndIndex:NULL];
+	
+	return listRange;
 }
 
 - (NSRange)rangeOfTextBlock:(DTTextBlock *)textBlock atIndex:(NSUInteger)location
 {
+	NSParameterAssert(textBlock);
+
 	return [self _rangeOfObject:textBlock inArrayBehindAttribute:DTTextBlocksAttribute atIndex:location];
 }
 
@@ -204,6 +226,74 @@
 	}];
 	
 	return foundRange;
+}
+
+- (NSRange)rangeOfLinkAtIndex:(NSUInteger)location URL:(NSURL **)URL
+{
+	NSRange rangeSoFar;
+	
+	NSURL *foundURL = [self attribute:DTLinkAttribute atIndex:location effectiveRange:&rangeSoFar];
+	
+	if (!foundURL)
+	{
+		return NSMakeRange(NSNotFound, 0);
+	}
+	
+	// search towards beginning
+	while (rangeSoFar.location>0)
+	{
+		NSRange extendedRange;
+		NSURL *extendedURL = [self attribute:DTLinkAttribute atIndex:rangeSoFar.location-1 effectiveRange:&extendedRange];
+		
+		// abort search if key not found or value not identical
+		if (!extendedURL || ![extendedURL isEqualToURL:foundURL])
+		{
+			break;
+		}
+		
+		rangeSoFar = NSUnionRange(rangeSoFar, extendedRange);
+	}
+	
+	NSUInteger length = [self length];
+	
+	// search towards end
+	while (NSMaxRange(rangeSoFar)<length)
+	{
+		NSRange extendedRange;
+		NSURL *extendedURL = [self attribute:DTLinkAttribute atIndex:NSMaxRange(rangeSoFar) effectiveRange:&extendedRange];
+		
+		// abort search if key not found or value not identical
+		if (!extendedURL || ![extendedURL isEqualToURL:foundURL])
+		{
+			break;
+		}
+		
+		rangeSoFar = NSUnionRange(rangeSoFar, extendedRange);
+	}
+	
+	if (URL)
+	{
+		*URL = foundURL;
+	}
+	
+	return rangeSoFar;
+}
+
+- (NSRange)rangeOfFieldAtIndex:(NSUInteger)location
+{
+    if (location<[self length])
+    {
+        // get range of prefix
+        NSRange fieldRange;
+        NSString *fieldAttribute = [self attribute:DTFieldAttribute atIndex:location effectiveRange:&fieldRange];
+        
+        if (fieldAttribute)
+        {
+            return fieldRange;
+        }
+    }
+    
+    return NSMakeRange(NSNotFound, 0);
 }
 
 #pragma mark HTML Encoding
@@ -250,17 +340,16 @@
 		paragraphStyle.tabStops = nil;
 		
 		paragraphStyle.headIndent = listIndent;
-		paragraphStyle.paragraphSpacing = 0;
 		
 		if (listStyle.type != DTCSSListStyleTypeNone)
 		{
 			// first tab is to right-align bullet, numbering against
-			CGFloat tabOffset = paragraphStyle.headIndent - 5.0f*1.0; // TODO: change with font size
+			CGFloat tabOffset = paragraphStyle.headIndent - (CGFloat)5.0; // TODO: change with font size
 			[paragraphStyle addTabStopAtPosition:tabOffset alignment:kCTRightTextAlignment];
 		}
 		
 		// second tab is for the beginning of first line after bullet
-		[paragraphStyle addTabStopAtPosition:paragraphStyle.headIndent alignment:	kCTLeftTextAlignment];	
+		[paragraphStyle addTabStopAtPosition:paragraphStyle.headIndent alignment:kCTLeftTextAlignment];	
 	}
 	
 	if (font)
@@ -280,7 +369,7 @@
 		
 		font = [fontDesc newMatchingFont];
 		
-#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_5_1
+#if DTCORETEXT_SUPPORT_NS_ATTRIBUTES && __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_5_1
 		if (___useiOS6Attributes)
 		{
 			UIFont *uiFont = [UIFont fontWithCTFont:font];
@@ -301,10 +390,10 @@
 	{
 		[newAttributes setObject:(__bridge id)textColor forKey:(id)kCTForegroundColorAttributeName];
 	}
-#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_5_1
+#if DTCORETEXT_SUPPORT_NS_ATTRIBUTES
 	else if (___useiOS6Attributes)
 	{
-		UIColor *uiColor = [attributes objectForKey:NSForegroundColorAttributeName];
+		DTColor *uiColor = [attributes foregroundColor];
 		
 		if (uiColor)
 		{
@@ -316,7 +405,7 @@
 	// add paragraph style (this has the tabs)
 	if (paragraphStyle)
 	{
-#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_5_1
+#if DTCORETEXT_SUPPORT_NS_ATTRIBUTES
 		if (___useiOS6Attributes)
 		{
 			NSParagraphStyle *style = [paragraphStyle NSParagraphStyle];
@@ -371,12 +460,11 @@
 		if (image)
 		{
 			// make an attachment for the image
-			DTTextAttachment *attachment = [[DTTextAttachment alloc] init];
-			attachment.contents = image;
-			attachment.contentType = DTTextAttachmentTypeImage;
+			DTImageTextAttachment *attachment = [[DTImageTextAttachment alloc] init];
+			attachment.image = image;
 			attachment.displaySize = image.size;
 			
-#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_5_1
+#if DTCORETEXT_SUPPORT_NS_ATTRIBUTES && TARGET_OS_IPHONE
 			// need run delegate for sizing
 			CTRunDelegateRef embeddedObjectRunDelegate = createEmbeddedObjectRunDelegate(attachment);
 			[newAttributes setObject:CFBridgingRelease(embeddedObjectRunDelegate) forKey:(id)kCTRunDelegateAttributeName];

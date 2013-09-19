@@ -18,15 +18,12 @@
 	return [CALayer class];
 }
 
-- (DTCoreTextLayoutFrame *)layoutFrame
+- (void) setupAttributedLabel
 {
-    self.layoutFrameHeightIsConstrainedByBounds = YES; // height is not flexible
-	DTCoreTextLayoutFrame * layoutFrame = [super layoutFrame];
-    layoutFrame.numberOfLines = self.numberOfLines;
-    layoutFrame.lineBreakMode = self.lineBreakMode;
-    layoutFrame.truncationString = self.truncationString;
-	layoutFrame.noLeadingOnFirstLine = YES;
-	return layoutFrame;
+	// we want to relayout the text if height or width change
+	self.relayoutMask = DTAttributedTextContentViewRelayoutOnHeightChanged | DTAttributedTextContentViewRelayoutOnWidthChanged;
+	
+	self.layoutFrameHeightIsConstrainedByBounds = YES; // height is not flexible
 }
 
 - (id)initWithFrame:(CGRect)frame
@@ -35,11 +32,16 @@
 	
 	if (self)
 	{
-		// we want to relayout the text if height or width change
-		self.relayoutMask = DTAttributedTextContentViewRelayoutOnHeightChanged | DTAttributedTextContentViewRelayoutOnWidthChanged;
+		[self setupAttributedLabel];
 	}
 	
 	return self;
+}
+
+- (void) awakeFromNib
+{
+	[super awakeFromNib];
+	[self setupAttributedLabel];
 }
 
 #pragma mark - Sizing
@@ -52,10 +54,17 @@
 	}
 	
 	//  we have a layout frame and from this we get the needed size
-	return [_layoutFrame intrinsicContentFrame].size;
+	CGSize intrisicContentSize = [_layoutFrame intrinsicContentFrame].size;
+	return CGSizeMake(intrisicContentSize.width + _edgeInsets.left + _edgeInsets.right,
+					  intrisicContentSize.height + _edgeInsets.top + _edgeInsets.bottom);
 }
 
 #pragma mark - Properties 
+
+- (NSInteger)numberOfLines
+{
+	return _numberOfLines;
+}
 
 - (void)setNumberOfLines:(NSInteger)numberOfLines
 {
@@ -64,6 +73,11 @@
         _numberOfLines = numberOfLines;
         [self relayoutText];
     }
+}
+
+- (NSLineBreakMode)lineBreakMode
+{
+	return _lineBreakMode;
 }
 
 - (void)setLineBreakMode:(NSLineBreakMode)lineBreakMode
@@ -75,17 +89,19 @@
     }
 }
 
-- (void)setTruncationString:(NSAttributedString *)trunctionString
+- (NSAttributedString*)truncationString
 {
-    if (trunctionString != _truncationString)
+	return _truncationString;
+}
+
+- (void)setTruncationString:(NSAttributedString *)truncationString
+{
+    if (![truncationString isEqualToAttributedString:_truncationString])
     {
-        _truncationString = trunctionString;
+        _truncationString = truncationString;
         [self relayoutText];
     }
 }
 
-@synthesize numberOfLines = _numberOfLines;
-@synthesize lineBreakMode = _lineBreakMode;
-@synthesize truncationString = _truncationString;
 
 @end
