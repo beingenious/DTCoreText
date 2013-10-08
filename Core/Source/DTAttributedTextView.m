@@ -193,8 +193,8 @@
 		Class classToUse = [self classForContentView];
 		
 //		CGRect frame = UIEdgeInsetsInsetRect(self.bounds, self.contentInset);
-		CGRect frame = UIEdgeInsetsInsetRect(self.bounds, UIEdgeInsetsMake(15, 15, 15, 15));
-//		CGRect frame = self.bounds;
+//		CGRect frame = UIEdgeInsetsInsetRect(self.bounds, UIEdgeInsetsMake(15, 15, 15, 15));
+		CGRect frame = self.bounds;
 		
 		if (frame.size.width<=0 || frame.size.height<=0)
 		{
