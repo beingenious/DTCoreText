@@ -31,6 +31,8 @@
  */
 @property (nonatomic, strong) NSAttributedString *attributedString;
 
+@property (nonatomic, assign) NSInteger columnGap;
+@property (nonatomic, assign) NSInteger columnCount;
 
 /**
  A delegate implementing DTAttributedTextContentViewDelegate to provide custom subviews for images and links.

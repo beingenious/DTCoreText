@@ -191,6 +191,7 @@
 	{
 		// subclasses can specify a DTAttributedTextContentView subclass instead
 		Class classToUse = [self classForContentView];
+
 		
 //		CGRect frame = UIEdgeInsetsInsetRect(self.bounds, self.contentInset);
 //		CGRect frame = UIEdgeInsetsInsetRect(self.bounds, UIEdgeInsetsMake(15, 15, 15, 15));
@@ -217,6 +218,9 @@
 		}
 		
 		_attributedTextContentView = [[classToUse alloc] initWithFrame:frame];
+		_attributedTextContentView.columnCount = self.columnCount;
+		_attributedTextContentView.columnGap = self.columnGap;
+		_attributedTextContentView.attributedString = self.attributedString;
 		
 		// restore previous layer class if we changed the layer class for the content view
 		if (previousLayerClass)
