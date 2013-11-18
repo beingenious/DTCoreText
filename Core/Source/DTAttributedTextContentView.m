@@ -468,7 +468,7 @@ static Class _layerClassToUseForDTAttributedTextContentView = nil;
 - (void)drawRect:(CGRect)rect
 {
 	CGContextRef context = UIGraphicsGetCurrentContext();
-	for (DTCoreTextLayoutFrame *lframe in self.layoutFrames) {
+	for (DTCoreTextLayoutFrame *lframe in _layoutFrames) {
 		[lframe drawInContext:context options:DTCoreTextLayoutFrameDrawingDefault];
 	}
 }
@@ -947,7 +947,7 @@ static Class _layerClassToUseForDTAttributedTextContentView = nil;
 - (DTCoreTextLayoutFrame *)layoutFrameForPosition:(NSInteger)index
 {
     DTCoreTextLayoutFrame *layoutFrame;
-    for (layoutFrame in self.layoutFrames) {
+    for (layoutFrame in _layoutFrames) {
         if (index < [layoutFrame visibleStringRange].length + [layoutFrame visibleStringRange].location) {
             break;
         }
