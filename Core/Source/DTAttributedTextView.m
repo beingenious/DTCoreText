@@ -359,9 +359,9 @@
 	if (_attributedTextContentView)
 	{
 		// pass it along if contentView already exists
-		_attributedTextContentView.attributedString = string;
 		_attributedTextContentView.columnCount = self.columnCount;
 		_attributedTextContentView.columnGap = self.columnGap;
+		_attributedTextContentView.attributedString = string;
 		// this causes a relayout and the resulting notification will allow us to set the frame and contentSize
 	}
 }
